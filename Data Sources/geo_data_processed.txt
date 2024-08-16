@@ -1,0 +1,158 @@
+Park Name, State, Latitude, Longitude
+Capitol Reef National Park, UT, 38.089600, -111.149910
+Pinnacles National Park, CA, 36.491508, -121.197243
+Rocky Mountain National Park, CO, 40.343182, -105.688103
+Offshore Trap/Pot Waters Area, Western Atlantic Ocean, 38.000000, -82.000000
+Steller Sea Lion Protection Area, AL, 57.466667, -153.433334
+Pacific Remote Islands Marine National Monument, HI, 16.736944, -169.523895
+Danville Conservation Area, MO, 38.865097, -91.504852
+Sand Harbor State Park, NV, 39.198364, -119.930984
+White Sands National Park, NM, 32.779720, -106.171669
+Jackson Hole, WY, 43.582767, -110.821999
+Mojave National Preserve, CA, 35.141689, -115.510399
+Buffalo National River, AR, 35.985512, -92.757652
+Hot Springs National Park, AR, 34.521530, -93.042267
+Kartchner Caverns State Park, AZ, 31.837551, -110.347382
+Navajo Nation Reservation, NM, 36.075321, -109.196930
+Sipsey Wilderness, AL, 34.332035, -87.434799
+Wrangell-St. Elias National Park & Preserve, AK, 61.710445, -142.985687
+Lake Clark National Park and Preserve, AK, 60.412697, -154.323502
+Katmai National Park and Preserve, AK, 58.597813, -154.693756
+Glacier Bay National Park and Preserve, AK, 58.665806, -136.900208
+Turtle Mountain, ND, 48.852882, -99.803535
+Odiorne Point State Park, NH, 43.049023, -70.720192
+Channel Islands National Park, CA, 33.998028, -119.772949
+Maplewood State Park, MN, 46.520966, -95.951576
+Bear Butte State Park, SD, 44.475296, -103.424309
+Okefenokee National Wildlife Refuge, GA, 30.773230, -82.292732
+Denali National Park and Preserve, AK, 63.129887, -151.197418
+Acadia National Park, ME, 44.338974, -68.273430
+Topanga State Park, CA, 34.093182, -118.587318
+Gates of the Arctic National Park and Preserve, AK, 67.915199, -153.463730
+Kaloko-Honokōhau National Historical Park, HI, 19.678328, -156.020477
+Pedernales Falls State Park, TX, 30.308069, -98.257729
+Whiskeytown National Recreation Area, CA, 40.633495, -122.564247
+Kenai Fjords National Park, AK, 60.043777, -149.816360
+Anahuac National Wildlife Refuge, TX, 29.610300, -94.449081
+Bandelier National Monument, NM, 35.767288, -106.311607
+Summit Bechtel Reserve, WV, 37.916035, -81.123047
+Rothrock State Forest, PA, 40.720585, -77.826965
+Great Smoky Mountains National Park, TN, 35.611763, -83.489548
+Yellowstone National Park, WY, 44.429764, -110.584663
+Haleakalā National Park, HI, 20.701283, -156.173325
+Malibu Creek State Park, CA, 34.105156, -118.731316
+Manti-La Sal National Forest, UT, 39.187050, -111.379890
+Cherry Creek State Park, CO, 39.639973, -104.831863
+Kissimmee Prairie Preserve State Park, FL, 27.612417, -81.053383
+Garden of Gods, CO, 38.873840, -104.886665
+Fort Berthold Indian Reservation, ND, 47.683880, -102.354126
+Chattahoochee National Forest, GA, 34.765972, -84.143517
+Little Sandy National Wildlife Refuge, TX, 32.590797, -95.273666
+Siuslaw National Forest, OR, 44.358715, -123.829994
+Kings Canyon National Park, CA, 36.887856, -118.555145
+Ruffner Mountain Nature Center, AL, 33.558990, -86.707016
+Kings Mountain State Park, SC, 35.130459, -81.345444
+Honolulu Watershed Forest Preserve, HI, 21.363251, -157.781265
+Oleta River State Park, FL, 25.921614, -80.144402
+Grant Park, IL, 41.876465, -87.621887
+Wisconsin Interstate State Park, WI, 45.398449, -92.645126
+Bridge Creek Wildlife Area, OR, 45.043449, -118.949318
+Willamette National Forest, OR, 44.060471, -122.091736
+William F Hayden Green Mountain Park, CO, 39.702827, -105.175636
+Cades Cove, TN, 35.593670, -83.824997
+Lantz Farm and Nature Preserve, WV, 39.516754, -80.649948
+Myakka State Forest, FL, 26.988386, -82.286552
+Lake Eola Park, FL, 28.545021, -81.372856
+Gulf State Park, AL, 30.262793, -87.636337
+Egypt Valley Wildlife Area, OH, 40.115486, -81.114090
+Shenandoah National Park, VA, 38.700516, -78.292694
+Everglades National Park, FL, 25.286615, -80.898651
+Mt Hood National Forest, OR, 45.227173, -121.839455
+Mammoth Cave National Park, KY, 37.183640, -86.159943
+Golden Gate National Recreation Area, CA, 37.8121, -122.4826
+Lake Mead National Recreation Area, NV, 36.0902, -113.0355
+Grand Canyon National Park, AZ, 36.1069, -112.1129
+Yosemite National Park, CA, 37.8651, -119.5383
+Rocky Mountain National Park, CO, 40.3428, -105.6836
+Olympic National Park, WA, 47.8021, -123.6040
+Grand Teton National Park, WY, 43.7904, -110.6818
+Mount Rushmore National Memorial, SD, 43.8791, -103.4591
+Zion National Park, UT, 37.2982, -113.0263
+San Francisco Maritime National Historical Park, CA, 37.8056, -122.4306
+Glacier National Park, MT, 48.7596, -113.7870
+Glen Canyon National Recreation Area, UT, 36.9255, -111.4584
+Point Reyes National Seashore, CA, 38.0390, -122.8806
+Mount Rainier National Park, WA, 46.8794, -121.7269
+Cabrillo National Monument, CA, 32.6735, -117.2425
+Badlands National Park, SD, 43.7445, -102.3397
+Muir Woods National Monument, CA, 37.8977, -122.5807
+Sequoia National Park, CA, 36.4864, -118.5658
+Lake Roosevelt National Recreation Area, WA, 47.8371, -118.8992
+Fort Point National Historic Site, CA, 37.8058, -122.4731
+John D. Rockefeller Memorial Parkway, WY, 44.4750, -110.5960
+Joshua Tree National Park, CA, 33.8734, -115.9000
+Petrified Forest National Park, AZ, 34.6399, -109.0610
+Whiskeytown-Shasta-Trinity National Recreation Area, CA, 40.7108, -122.7920
+Bryce Canyon National Park, UT, 37.5930, -112.1871
+Death Valley National Park, CA, 36.4623, -116.8650
+Curecanti National Recreation Area, CO, 38.5338, -107.0288
+Carlsbad Caverns National Park, NM, 32.1405, -104.5560
+Wind Cave National Park, SD, 43.5900, -103.4244
+Crater Lake National Park, OR, 42.9446, -122.1090
+White Sands National Monument, NM, 32.7904, -106.1755
+Saguaro National Park, AZ, 32.2204, -110.8001
+Mesa Verde National Park, CO, 37.2300, -108.4618
+Arches National Park, UT, 38.7331, -109.5925
+Montezuma Castle National Monument, AZ, 34.5866, -111.8506
+Canyon de Chelly National Monument, AZ, 36.1372, -109.5463
+Theodore Roosevelt National Park, ND, 46.9904, -103.5355
+Lassen Volcanic National Park, CA, 40.4985, -121.6722
+Cedar Breaks National Monument, UT, 37.6488, -113.4252
+Colorado National Monument, CO, 39.1189, -108.6508
+San Juan Island National Historical Park, WA, 48.5404, -123.0336
+Dinosaur National Monument, CO, 40.4988, -108.6228
+Fort Vancouver National Historic Site, WA, 45.6325, -122.6731
+Redwood National Park, CA, 41.2131, -124.0046
+Devils Tower National Monument, WY, 44.5900, -104.7147
+Little Bighorn Battlefield National Monument, MT, 45.5668, -107.3872
+Santa Monica Mountains National Recreation Area, CA, 34.0841, -118.8054
+Organ Pipe Cactus National Monument, AZ, 32.0658, -112.8051
+Sunset Crater Volcano National Monument, AZ, 35.3454, -111.5084
+North Cascades National Park, WA, 48.7596, -121.8113
+Bighorn Canyon National Recreation Area, WY, 45.0847, -107.2485
+Canyonlands National Park, UT, 38.3269, -109.8782
+Bandelier National Monument, NM, 35.6918, -106.2958
+Black Canyon of the Gunnison National Park, CO, 38.5760, -107.7208
+Great Sand Dunes National Preserve, CO, 37.5671, -105.5914
+Craters of the Moon National Monument, ID, 43.5271, -113.4115
+Ross Lake National Recreation Area, WA, 48.5100, -121.5181
+Wupatki National Monument, AZ, 35.6434, -111.4858
+Scotts Bluff National Monument, NE, 41.8312, -103.6664
+Nez Perce National Historical Park, WA, 45.6374, -115.3575
+Lewis and Clark National Historical Park, WA, 46.2087, -123.8269
+Timpanogos Cave National Monument, UT, 40.3287, -111.7100
+Oregon Caves National Monument and Preserve, OR, 42.6402, -123.4594
+Casa Grande Ruins National Monument, AZ, 32.7835, -111.5412
+Rainbow Bridge National Monument, UT, 37.2242, -110.0950
+Lava Beds National Monument, CA, 41.6010, -121.5110
+Walnut Canyon National Monument, AZ, 35.1690, -111.5006
+Hubbell Trading Post National Historic Site, AZ, 36.5120, -109.2960
+Jewel Cave National Monument, SD, 43.7491, -103.5960
+Devils Postpile National Monument, CA, 37.6316, -118.6266
+Tuzigoot National Monument, AZ, 34.6940, -112.0340
+John Day Fossil Beds National Monument, OR, 44.5070, -120.5290
+Whitman Mission National Historic Site, WA, 45.4093, -118.5503
+Fort Laramie National Historic Site, WY, 42.1995, -104.5593
+Natural Bridges National Monument, UT, 37.4936, -110.1194
+Tumacacori National Historical Park, AZ, 31.5966, -111.0500
+Coronado National Memorial, AZ, 31.4381, -109.0580
+Chiricahua National Monument, AZ, 32.0482, -109.1570
+Tonto National Monument, AZ, 33.6836, -111.4541
+Aztec Ruins National Monument, NM, 36.7911, -107.9989
+Capulin Volcano National Monument, NM, 36.5724, -103.9460
+Great Basin National Park, NV, 39.0182, -114.2814
+Navajo National Monument, AZ, 36.4601, -110.1740
+Florissant Fossil Beds National Monument, CO, 38.8811, -105.3441
+Chaco Culture National Historical Park, NM, 36.0698, -107.9624
+El Malpais National Monument, NM, 34.8740, -106.8730
+El Morro National Monument, NM, 35.0273, -107.3293

@@ -1,0 +1,574 @@
+---
+title: "National Parks Visitation"
+author: "Charles Coonce"
+date: "2023-11-13"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gganimate)
+library(scales)
+library(tinytex)
+library(knitr)
+library(usmap)
+library(readr)
+library(sf)
+library(geosphere)
+library(TSP)
+library(cluster)
+library(gridExtra)
+library(stringr)
+```
+
+# Getting Familiar with our Data!
+
+We first need to load the data set I found from [ data.world](https://data.world/inform8n/us-national-parks-visitation-1904-2016-with-boundaries/workspace/file?filename=All+National+Parks+Visitation+1904-2016.csv).
+
+```{r Add National Parks Visitor Data Set}
+
+  ## Getting my Data Set
+data <- read.csv("~/Documents/GitHub/National_Parks_Project/Data Sources/US_NPS_Visitation/original/All National Parks Visitation 1904-2016.csv")
+
+```
+
+First, I would like to understand the structure of this data set.
+
+```{r Checking Structure, include=TRUE, eval=FALSE}
+
+  ## Exploring my Data Set
+head(data, 3)
+summary(data)
+
+```
+
+This set has 18 columns consisting of 17 'character' variables and one 'int' variable. The various columns contain information like park name, region, state, type of park, and number of visitors. Each observation (or row) is a different park by year.
+
+# The Problem
+
+After seeing the structure of this set, I think the first question I would like to answer is which parks I should plan to visit based solely on popularity by number of visitors.
+
+## Exploratory Analysis
+
+First, Let's clean some things up by removing unnecessary columns for my analysis.
+
+```{r Data Manipulation to check for problems}
+
+  ## Select fewer columns
+data_clean <- select(data, Region:YearRaw)
+
+ ## Check for missing or problem values
+year_list <-data_clean %>% count(data_clean$YearRaw)
+## head(year_list,4)
+## tail(year_list,2)
+## sum(is.na(data_clean$visitors))
+
+```
+
+After looking at the smaller subset of data, the 'yearraw' column has a 'Total' section that will cause issues during analysis. I will also convert it to a numeric value rather than character value. In addition, the 'visitors' column has 4 values that are not available. I will remove those observations to streamline my exploration.
+
+```{r Clearing Problem observations}
+
+  ## Removing observations with NA's
+data_clean <- na.omit(data_clean)
+
+
+  ## Subset the data
+data_totals <- subset(data_clean, YearRaw == "Total")
+data_clean <- subset(data_clean, YearRaw != "Total")
+data_clean$YearRaw <- as.numeric(data_clean$YearRaw)
+```
+
+
+## Visitation Trends
+
+I want to understand the trend for all National park visitation over the years before sub-setting to smaller groups. This will help me compare national trends to the trends of different areas.
+
+---
+
+```{r Create a basic Line Plot of Total Visitation, echo=FALSE, out.width= 400}
+
+sum_by_year <- aggregate(Visitors ~ YearRaw, data_clean, sum) 
+
+p1 <- ggplot(data = sum_by_year, aes(x = YearRaw, y = Visitors)) +
+  geom_line() +
+  scale_y_continuous(labels = label_number()) +
+  theme_minimal() +
+  labs(title = "Total National Park Visitation per Year (1904-2016)",
+       x = "Year", y = "Total Visitors (in Millions)")
+p1
+
+```
+
+---
+
+This plot shows how visitor numbers have changed over time. It appears there is an overall increasing trend in the number of visitors, which could be attributed to a variety of factors that would require a deeper dive.
+
+
+![National Parks Service Regions - This poster explains the region categories used in this data set.](~/Documents/GitHub/National_Parks_Project/Data Sources)
+
+\newpage
+
+## Regions
+
+The data set is subdivided into regions as shown in the info graphic above.
+
+I am only interested in regions near me. So I am going to look at the region I am in as well as surrounding regions. I need to group and filter my data set to get the appropriate observations.
+
+```{r Data Manipulation for grouping by region}
+
+  ## group and filter by region
+region_total <- data_clean %>%
+  filter(Region == "PW" | Region == "IM" |
+         Region == "MW") %>%
+  group_by(YearRaw, Region) %>% 
+  summarise(Total = sum(Visitors), .groups = "rowwise") %>%
+  na.omit()
+
+```
+
+---
+
+```{r Plot 2, echo=FALSE, warning=FALSE}
+
+  ## Line Plot by Selected Regions
+p2 <- ggplot(region_total, aes(x = YearRaw, y = Total, group = Region, color = Region)) +
+  geom_line() +
+  scale_y_continuous(labels = label_number()) +
+  theme_minimal() +
+  labs(title = "Total National Park Visitation per Year (1904-2016)", 
+       x = NULL,
+       y = "Total Visitors (in Millions)") +
+  facet_wrap(~ Region) +
+  theme(axis.text.x = element_blank())
+
+p2
+
+```
+
+---
+
+These plots show that Intermountain and Pacific West regions have seen the steepest increases in visits. I will focus my attention on these two regions.
+
+## States
+
+In order to show total visitation by state I need to filter and group my data set.
+
+```{r Data Manipulation for grouping by State, echo=TRUE}
+  ## Group by State
+state_data <- data_clean %>%
+  group_by(State) %>%
+  summarise(Total = sum(Visitors)) %>%
+  filter(State %in% c("WA", "OR", "CA", "MT", "WY", 
+                      "CO", "UT", "NV", "ND", "SD", 
+                      "NE", "ID", "AZ", "NM"))
+```
+
+Next, I need to add location data in order to create a heat map of my new data. I can use the 'usmap' package to create an interesting plot.
+
+```{r Get States Map}
+
+  ## Get the states map data from usmap
+states_map <- usmap::us_map(regions = "states") %>%
+  filter(abbr %in% c("WA", "OR", "CA", "MT", "WY", "CO", 
+                     "UT", "NV", "ND", "SD", "NE", "ID", 
+                     "AZ", "NM"))
+
+  ## Merge visitor data with map data
+merged_data <- merge(states_map, state_data, by.x = "abbr", 
+                     by.y = "State", all.x = TRUE)
+
+```
+
+Now I can prepare my base layer for adding multiple data visualizations.
+
+```{r Create Base Map for Map Plot}
+# Create the heatmap
+p3 <- ggplot() +
+  geom_sf(data = merged_data, aes(fill = Total), color = "black") +
+  scale_fill_continuous(
+    labels = scales::label_number(), 
+    low = "white", 
+    high = "red", 
+    name = "Total Visits", 
+    na.value = "gray"
+  ) +
+  theme_void() +
+  labs(title = "Heatmap of Total National Park Visits by Selected Western US States")
+
+# Plot
+print(p3)
+```
+
+\newpage
+
+This heatmap shows which states have the most visitors. Based on the results, I will pick the top parks in California, Wyoming, and Washington. I'd like to start thinking about weighing the distance from my home and the number of visitors to see if it can help me decide.
+
+I will need to find another dataset to add latitude and longitude values for the top parks. and add that information into my top parks data I started preparing below.
+
+```{r Filter and group by Park}
+
+top_parks <- data_clean %>%
+  group_by(Unit.Name, State) %>%
+  summarise(Total = sum(Visitors), .groups = "rowwise") %>%
+  arrange(desc(Total)) %>%
+  filter(State %in% c("WA", "OR", "CA", "MT", "WY", 
+                      "CO", "UT", "NV", "ND", "SD", 
+                      "NE", "ID", "AZ", "NM"))
+
+```
+
+I was able to compile the coordinates for a number of the most visited parks. I need to create a data frame before I can merge my top parks data with these locations.
+
+```{r Create new data frame from Text file, warning=FALSE}
+
+  ## Creating a new data frame from the coordinates I compiled
+geo_data <- read_csv("~/Documents/GitHub/National_Parks_Project/Data Sources/geo_data_processed.txt", col_types = cols(Lat = col_number(),
+    Long = col_number()))
+
+```
+
+```{r Merging new coordinates with top_parks Data Frame}
+
+ ## adding coordinates to my list of top parks
+top_parks_merged <- merge(top_parks, geo_data, 
+                     by.x = "Unit.Name", by.y = "Park Name")
+
+  ## rearranging columns to make manipulation easier
+top_parks_rearranged <- select(top_parks_merged, Unit.Name, State.x, Total, Longitude, Latitude)
+
+```
+
+After Merging, I now need to convert the Longitude and Latitude to the 'usmap' coordinate system in order to map locations onto my base layer.
+
+```{r Coordinate conversion for usmap, warning = FALSE}
+
+states_to_include <- c("WA", "OR", "CA", "MT", "WY", "CO", "UT", "NV", "ND", "SD", "NE", "ID", "AZ", "NM")
+
+states_map <- usmap::us_map(regions = "states") %>%
+  filter(abbr %in% states_to_include)
+
+top_parks_rearranged_sf <- st_as_sf(top_parks_rearranged, 
+                                    coords = c("Longitude", "Latitude"), 
+                                    crs = 4326)
+
+```
+
+Now I can create a plot to summarize my findings.
+
+---
+
+```{r}
+# Create a base map with state boundaries
+base_map <- ggplot() +
+  geom_sf(data = states_map, fill = "white", color = "black") +
+  theme_minimal() +
+  labs(title = "Bubble Plot of National Parks")
+
+# Create bubble plot
+bubble_plot <- base_map +
+  geom_sf(data = top_parks_rearranged_sf, aes(size = Total), color = "blue", alpha = 0.7) +
+  scale_size_continuous(name = "Total Visitors", labels = scales::label_number(big.mark = ",")) +
+  theme(legend.position = "right")
+
+print(bubble_plot)
+```
+
+
+---
+
+Now that I have a better idea of where specific top parks are I can start narrowing my search. I think I should consider distance from my home.
+
+## Distance Analysis
+
+I will start by loading and converting my hometown coordinates to the 'usmap' coordinate system.
+
+```{r Hometown Coordinates, warning = FALSE}
+
+  ## Coordinates for Helena, Montana
+helena_coords <- data.frame(Longitude = -112.0372, Latitude = 46.5891)
+helena_coords_transformed <- usmap_transform(helena_coords, input_names = c("Longitude", "Latitude"))
+
+```
+
+Now I need to use the Haversine formula which is useful for determining the shortest path between two points on the Earth using the Latitude and Longitude coordinate system.
+
+```{r Haversine Formula}
+
+  ## Calculate distances from Helena to each park
+top_parks_merged$distance <- distHaversine(matrix(c(helena_coords$Longitude, 
+                                                helena_coords$Latitude), nrow = 1),
+                                                matrix(c(top_parks_merged$Longitude,
+                                                top_parks_merged$Latitude),
+                                                ncol = 2), r=6378137)
+  ## Converting to miles from Km
+top_parks_merged$distance_miles <- top_parks_merged$distance / 1609.34
+
+```
+
+In order to plot this information I want to add my hometown coordinates to the top parks data frame.
+
+```{r Adding Helena Coords}
+
+ ## that repeats Helena's coordinates
+helena_repeated <- data.frame(
+  x = rep(helena_coords$Latitude, nrow(top_parks_merged)),
+  y = rep(helena_coords$Longitude, nrow(top_parks_merged))
+)
+
+ ## Add Helena's coordinates to the 'transformed_top_parks' data frame
+top_parks_merged$helena_x <- helena_repeated$x
+top_parks_merged$helena_y <- helena_repeated$y
+
+```
+
+
+And finally, I will create the plot.
+
+```{r Filtering for plot asthetics, echo=FALSE}
+
+  ## Creating A second Data Frame for future plot
+top_parks_cluster <- top_parks_merged
+
+  ## Filter to only the top parks by visitation
+top_parks_merged <- arrange(top_parks_merged,desc(Total)) %>%
+  filter(top_parks_merged$Total >= 60000000)
+
+```
+
+\newpage
+
+---     
+
+
+
+```{r Plot 6, echo=FALSE}
+  ## Now plot using the 'transformed_top_parks' dataframe
+p6 <- base_map +
+  geom_segment(data = top_parks_cluster, 
+               aes(x = helena_x, y = helena_y, xend = Latitude, 
+               yend = Longitude, color = distance_miles), 
+               arrow = arrow(length = unit(0.1, "inches"))) +
+  scale_color_viridis_b(name = "Distance (miles)") +
+  coord_sf() +
+  labs(title = "Distance from Helena, MT", x = NULL, y = NULL) +
+    theme(legend.position = "right",
+        text = element_text(size = 12), 
+        title = element_text(size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "white"))
+
+p6
+
+```
+
+---
+
+# Re-Defining the problem
+
+After seeing this visualization, I want to pivot to a new problem. How I can optimize seeing multiple parks per trip rather than trying to choose one park. There are too many nearby! I need to use a clustering model to group the parks by looking at their distances from each other. To do this I need to use a hierarchical cluster function.
+
+```{r Clustering}
+
+  ## Perform a hierarchical clustering
+  
+  ## Creating distance matrix
+dist_matrix <- dist(top_parks_cluster[,c('Longitude', 'Latitude')])
+clusters <- hclust(dist_matrix)
+
+  ## Split into clusters of parks
+park_clusters <- cutree(clusters, k = 5)
+top_parks_cluster$cluster <- park_clusters
+
+```
+
+\newpage
+
+With my new set of clustered parks, I want to see how the clusters worked out.
+
+---
+
+```{r Plot 7, echo=FALSE}
+
+p7 <- base_map +
+  geom_point(data = top_parks_cluster, aes(x = x, y = y, color = factor(cluster)), size = 2, alpha = 0.9) +
+  scale_color_brewer(palette = "Set1") +  # Use a qualitative color palette
+  labs(title = "Cluster Analysis of National Parks", 
+       color = "Cluster") +
+  theme_minimal() +
+  coord_quickmap() +
+    labs(title = "Cluster Results", x = NULL, y = NULL) +
+    theme(legend.position = "right",
+        text = element_text(size = 12), 
+        title = element_text(size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "white"))
+
+p7
+
+```
+
+---
+
+Not a bad result, but there are a few parks I want to change to a different cluster.
+
+\newpage
+
+```{r Adjusting clusters, echo=FALSE}
+
+top_parks_cluster$cluster[12] <- 1
+top_parks_cluster$cluster[33] <- 1
+top_parks_cluster <- top_parks_cluster[-21, ]
+top_parks_cluster <- top_parks_cluster[-6, ]
+top_parks_cluster <- top_parks_cluster[-3, ]
+
+```
+
+---
+
+```{r Plot 7.1, echo=FALSE}
+
+p7.1 <- base_map +
+  geom_point(data = top_parks_cluster, aes(x = x, y = y, color = factor(cluster)), size = 2, alpha = 0.9) +
+  scale_color_brewer(palette = "Set1") +  # Use a qualitative color palette
+  labs(title = "Cluster Analysis of National Parks", 
+       color = "Cluster") +
+  theme_minimal() +
+  labs(title = "Adjusted Cluster Results", x = NULL, y = NULL) +
+    theme(legend.position = "right",
+        text = element_text(size = 12), 
+        title = element_text(size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "white"))
+
+p7.1
+
+```
+
+---
+
+Better! Now I want to know what the most efficient way to drive from park to park is so I will use the Traveling Salesman Problem (TSP). The TSP finds shortest possible route that visits each city exactly once and returns to the original city. I would likely be able to get a more accurate route optimization if I was using road directions, rather than straight distances. I think that a basic TSP is more than enough for this situation.
+
+
+```{r TSP}
+
+  ## Initialize an empty list to store results
+tsp_results <- list()
+
+  ## Loop through each cluster
+for (i in 1:max(top_parks_cluster$cluster)) {
+    ## Subset parks for the current cluster
+  cluster_parks <- top_parks_cluster[top_parks_cluster$cluster == i, ]
+  
+    ## Calculate the distance matrix for the current cluster
+  dist_matrix <- as.dist(distm(cluster_parks[, c("Longitude", "Latitude")], 
+                               cluster_parks[, c("Longitude", "Latitude")], 
+                               fun = distHaversine))
+  
+    ## Solve the TSP problem using the nearest neighbor heuristic
+  tsp_solution <- solve_TSP(TSP(dist_matrix), method = "nearest_insertion")
+  
+    ## Solution List
+  tsp_results[[paste("Cluster", i)]] <- tsp_solution
+}
+
+```
+
+Now that I have the results, I can visualize what the optimal route is. In order to do that, I want to plot them all on the same map which will require creating a function to compile all the data points into one table.
+
+```{r A Function to create the Segments of the Traveling Sales Person Model}
+
+  ## Function to create segments from the TSP solution
+get_tsp_segments <- function(cluster_number, top_parks_cluster, tsp_results) {
+  
+    ## Filter the parks by the selected cluster
+  selected_cluster <- filter(top_parks_cluster, cluster == cluster_number)
+  
+    ## Retrieve the TSP order for the cluster
+  tsp_order <- tsp_results[[paste("Cluster", cluster_number)]]
+  tsp_solution_order <- TOUR(tsp_order)
+  
+    ## Order the parks according to the TSP solution
+  ordered_cluster <- selected_cluster[tsp_solution_order, ]
+  
+    ## Close the loop by returning to the starting point
+  ordered_cluster <- rbind(ordered_cluster, ordered_cluster[1, ])
+  
+    ## Create segments for each leg of the TSP path
+  segments <- data.frame(cluster = cluster_number,
+                         x = ordered_cluster$x[-nrow(ordered_cluster)], 
+                         y = ordered_cluster$y[-nrow(ordered_cluster)], 
+                         xend = ordered_cluster$x[-1], 
+                         yend = ordered_cluster$y[-1]
+                         )
+  
+  return(segments)
+}
+
+  ## Call the function
+all_segments <- lapply(1:max(top_parks_cluster$cluster), function(cluster_num) {
+  get_tsp_segments(cluster_num, top_parks_cluster, tsp_results)
+})
+
+  ## Combine all segments into one data frame
+all_segments_df <- do.call(rbind, all_segments)
+
+```
+
+\newpage
+
+---
+
+```{r Plot 8, echo=FALSE}
+
+  ## Creating plot 8
+p8 <- base_map +
+  geom_segment(data = all_segments_df, 
+               aes(x = x, y = y, xend = xend, yend = yend, 
+               group = cluster, color = as.factor(cluster),
+               ), 
+               linewidth = unit(0.6, "cm"), 
+               arrow = arrow(length = unit(0.2, "cm"))) +
+  scale_color_brewer(palette = "Set1", name = "Routes") +
+  geom_point(data = all_segments_df, 
+             aes(x = x, y = y, group = cluster), 
+             size = .25) +
+    labs(title = "Multi-park Trip Options", x = NULL, y = NULL) +
+    theme(legend.position = "right",
+          legend.background = element_rect(fill = "white", 
+                                           color = "white"),
+          legend.box.background = element_rect(fill = "white"),
+          legend.key = element_rect(fill = "white", colour = "white"),
+          text = element_text(size = 12), 
+          title = element_text(size = 14),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.ticks = element_blank(), 
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          panel.background = element_rect(fill = "white"))
+
+p8
+
+```
+
+---

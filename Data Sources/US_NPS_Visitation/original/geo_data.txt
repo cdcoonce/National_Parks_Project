@@ -1,0 +1,45 @@
+Park Name,Latitude,Longitude
+Golden Gate National Recreation Area,37.8004,-122.4771
+Lake Mead National Recreation Area,36.0152,-114.8220
+Yosemite National Park,37.7157,-119.5833
+Rocky Mountain National Park,40.4572,-105.6648
+Yellowstone National Park,44.6933,-110.5364
+Olympic National Park,47.9700,-123.4600
+Grand Teton National Park,44.6319,-110.4514
+Mount Rushmore National Memorial,43.9047,-103.9806
+Zion National Park,37.2975,-112.9790
+San Francisco Maritime National Historical Park,37.7833,-122.4194
+Glacier National Park,48.6444,-113.4281
+Glen Canyon National Recreation Area,36.9858,-111.5014
+Point Reyes National Seashore,37.9678,-122.9100
+Mount Rainier National Park,46.8503,-121.9173
+Cabrillo National Monument,32.7100,-117.2300
+Badlands National Park,43.9784,-102.0800
+Muir Woods National Monument,37.8978,-122.5197
+Sequoia National Park,36.1264,-118.4374
+Lake Roosevelt National Recreation Area,47.4525,-118.1628
+Fort Point National Historic Site,37.7950,-122.4947
+John D. Rockefeller Jr. Memorial Parkway,41.4434,-77.8360
+Joshua Tree National Park,33.8733,-116.5844
+Kings Canyon National Park,36.7814,-118.1720
+Whiskeytown-Shasta-Trinity National Recreation Area,41.0300,-122.0400
+Bryce Canyon National Park,37.5933,-111.2233
+Death Valley National Park,36.2371,-116.8250
+Curecanti National Recreation Area,38.4000,-107.6000
+Wind Cave National Park,43.1167,-103.4500
+Crater Lake National Park,42.9083,-122.1833
+Mesa Verde National Park,37.0909,-108.4894
+Arches National Park,38.1922,-108.6606
+Theodore Roosevelt National Park,46.9400,-103.9600
+Lassen Volcanic National Park,40.4858,-121.4844
+Capitol Reef National Park,38.9225,-111.4953
+Cedar Breaks National Monument,37.6975,-111.3744
+Colorado National Monument,35.4450,-108.8450
+San Juan Island National Historical Park,48.5369,-123.0275
+Dinosaur National Monument,40.4742,-109.5236
+Fort Vancouver National Historic Site,45.5942,-122.6778
+Redwood National Park,41.1912,-123.8894
+Devils Tower National Monument,44.8825,-104.1244
+Little Bighorn Battlefield National Monument,45.0700,-107.0600
+Santa Monica Mountains National Recreation Area,34.0194,-118.5900
+North Cascades National Park,48.3083,-121.1844
