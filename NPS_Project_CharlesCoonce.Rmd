@@ -13,24 +13,29 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(dplyr)
 library(tidyr)
-library(ggplot2)
-library(gganimate)
-library(scales)
-library(tinytex)
 library(knitr)
-library(usmap)
+library(stringr)
 library(readr)
+
+library(ggplot2)
+library(httr)
+library(jsonlite)
 library(sf)
+library(scales)
+library(usmap)
 library(geosphere)
+
 library(TSP)
 library(cluster)
+
 library(gridExtra)
-library(stringr)
+library(gganimate)
+library(tinytex)
 ```
 
 # Getting Familiar with our Data!
 
-We first need to load the data set I found from [ data.world](https://data.world/inform8n/us-national-parks-visitation-1904-2016-with-boundaries/workspace/file?filename=All+National+Parks+Visitation+1904-2016.csv).
+We first need to load the data set I found from [data.world](https://data.world/inform8n/us-national-parks-visitation-1904-2016-with-boundaries/workspace/file?filename=All+National+Parks+Visitation+1904-2016.csv).
 
 ```{r Add National Parks Visitor Data Set}
 
@@ -86,12 +91,11 @@ data_clean <- subset(data_clean, YearRaw != "Total")
 data_clean$YearRaw <- as.numeric(data_clean$YearRaw)
 ```
 
-
 ## Visitation Trends
 
 I want to understand the trend for all National park visitation over the years before sub-setting to smaller groups. This will help me compare national trends to the trends of different areas.
 
----
+------------------------------------------------------------------------
 
 ```{r Create a basic Line Plot of Total Visitation, echo=FALSE, out.width= 400}
 
@@ -107,12 +111,11 @@ p1
 
 ```
 
----
+------------------------------------------------------------------------
 
 This plot shows how visitor numbers have changed over time. It appears there is an overall increasing trend in the number of visitors, which could be attributed to a variety of factors that would require a deeper dive.
 
-
-![National Parks Service Regions - This poster explains the region categories used in this data set.](~/Documents/GitHub/National_Parks_Project/Data Sources)
+![National Parks Service Regions - This poster explains the region categories used in this data set.](~/Documents/GitHub/National_Parks_Project/Data%20Sources)
 
 \newpage
 
@@ -134,7 +137,7 @@ region_total <- data_clean %>%
 
 ```
 
----
+------------------------------------------------------------------------
 
 ```{r Plot 2, echo=FALSE, warning=FALSE}
 
@@ -153,7 +156,7 @@ p2
 
 ```
 
----
+------------------------------------------------------------------------
 
 These plots show that Intermountain and Pacific West regions have seen the steepest increases in visits. I will focus my attention on these two regions.
 
@@ -263,14 +266,14 @@ top_parks_rearranged_sf <- st_as_sf(top_parks_rearranged,
 
 Now I can create a plot to summarize my findings.
 
----
+------------------------------------------------------------------------
 
 ```{r}
 # Create a base map with state boundaries
 base_map <- ggplot() +
   geom_sf(data = states_map, fill = "white", color = "black") +
   theme_minimal() +
-  labs(title = "Bubble Plot of National Parks")
+  labs(title = "Total Visitation for Western United States National Parks")
 
 # Create bubble plot
 bubble_plot <- base_map +
@@ -281,8 +284,7 @@ bubble_plot <- base_map +
 print(bubble_plot)
 ```
 
-
----
+------------------------------------------------------------------------
 
 Now that I have a better idea of where specific top parks are I can start narrowing my search. I think I should consider distance from my home.
 
@@ -293,87 +295,115 @@ I will start by loading and converting my hometown coordinates to the 'usmap' co
 ```{r Hometown Coordinates, warning = FALSE}
 
   ## Coordinates for Helena, Montana
-helena_coords <- data.frame(Longitude = -112.0372, Latitude = 46.5891)
-helena_coords_transformed <- usmap_transform(helena_coords, input_names = c("Longitude", "Latitude"))
+helena_coords <- data.frame(Latitude = 46.5891, Longitude = -112.0372)
+
+helena_coords_transformed_sf <- st_as_sf(helena_coords, 
+                                    coords = c("Longitude", "Latitude"), 
+                                    crs = 4326)
+
+top_parks_merged_sf <- st_as_sf(top_parks_merged, 
+                                    coords = c("Longitude", "Latitude"), 
+                                    crs = 4326)
 
 ```
 
-Now I need to use the Haversine formula which is useful for determining the shortest path between two points on the Earth using the Latitude and Longitude coordinate system.
+```{r}
 
-```{r Haversine Formula}
+  ## Function for getting route coordinates for each park
+get_route <- function(start, end) {
+  url <- paste0(
+    "http://router.project-osrm.org/route/v1/driving/",
+    start["lon"], ",", start["lat"], ";",
+    end["Longitude"], ",", end["Latitude"],
+    "?overview=full&geometries=geojson"
+  )
+  
+  response <- httr::GET(url)
+  route <- jsonlite::fromJSON(content(response, "text", encoding = "UTF-8"))
+  route_coords <- route$routes$geometry$coordinates[[1]]
+  route_coords_df <- data.frame(
+    lon = route_coords[, 1],
+    lat = route_coords[, 2]
+  )
+  return(route_coords_df)
+}
 
-  ## Calculate distances from Helena to each park
-top_parks_merged$distance <- distHaversine(matrix(c(helena_coords$Longitude, 
-                                                helena_coords$Latitude), nrow = 1),
-                                                matrix(c(top_parks_merged$Longitude,
-                                                top_parks_merged$Latitude),
-                                                ncol = 2), r=6378137)
-  ## Converting to miles from Km
-top_parks_merged$distance_miles <- top_parks_merged$distance / 1609.34
+  ## Helena (Start Location) coordinates
+start <- c(lat = 46.5891, lon = -112.0372)
+
+routes_list <- lapply(1:nrow(top_parks_merged), function(i) {
+  end <- top_parks_merged[i, ]
+  route_df <- get_route(start, end)
+  route_df$park <- top_parks_merged$Unit.Name[i]
+  return(route_df)
+})
+
+all_routes <- do.call(rbind, routes_list)
 
 ```
 
-In order to plot this information I want to add my hometown coordinates to the top parks data frame.
 
-```{r Adding Helena Coords}
+```{r}
 
- ## that repeats Helena's coordinates
-helena_repeated <- data.frame(
-  x = rep(helena_coords$Latitude, nrow(top_parks_merged)),
-  y = rep(helena_coords$Longitude, nrow(top_parks_merged))
+# Conversion factor from meters to miles
+meters_to_miles <- 1609.34
+
+# Function to calculate total distance of a route in miles
+calculate_total_distance_miles <- function(df) {
+  # Ensure that lon and lat columns are numeric
+  df$lon <- as.numeric(df$lon)
+  df$lat <- as.numeric(df$lat)
+  
+  # Compute distances between consecutive points
+  coords <- as.matrix(df[, c("lon", "lat")])
+  distances <- distVincentySphere(coords[1:(nrow(coords) - 1), ], coords[2:nrow(coords), ])
+  
+  # Sum distances and convert to miles
+  total_distance_meters <- sum(distances)
+  total_distance_miles <- total_distance_meters / meters_to_miles
+  return(total_distance_miles)
+}
+
+# Apply the function to each data frame in routes_list
+total_distances_miles <- sapply(routes_list, calculate_total_distance_miles)
+
+# Add total distances (in miles) to each data frame in routes_list
+routes_list_with_distance_miles <- Map(function(df, dist) {
+  df$total_distance_miles <- dist
+  return(df)
+}, routes_list, total_distances_miles)
+
+# Combine all data frames into one data frame
+all_routes <- bind_rows(routes_list_with_distance_miles)
+
+```
+
+
+```{r}
+route_sf <- st_as_sf(all_routes, coords = c("lon", "lat"), crs = 4326)
+
+# Add a column for distance categories for better visualization
+all_routes$distance_category <- cut(
+  all_routes$total_distance_miles,
+  breaks = c(0, 10, 50, 100, 200, Inf), # Customize the breaks as needed
+  labels = c("0-10 miles", "10-50 miles", "50-100 miles", "100-200 miles", "200+ miles")
 )
 
- ## Add Helena's coordinates to the 'transformed_top_parks' data frame
-top_parks_merged$helena_x <- helena_repeated$x
-top_parks_merged$helena_y <- helena_repeated$y
+# Plot with color gradient based on distance
+p <- base_map +
+  geom_sf(data = route_sf, aes(color = total_distance_miles), size = 0.2) +
+  geom_point(aes(x = start["lon"], y = start["lat"]), color = "red", size = 1, shape = 17) +
+  geom_point(data = top_parks_merged, aes(x = Longitude, y = Latitude), color = "green", size = 1, shape = 17) +
+  labs(title = "Routes from Helena, MT to National Parks",
+       x = "Longitude", y = "Latitude",
+       color = "Distance (miles)") +
+  theme_minimal() +
+  scale_color_viridis_c() # Use a continuous color scale
 
+print(p)
 ```
 
-
-And finally, I will create the plot.
-
-```{r Filtering for plot asthetics, echo=FALSE}
-
-  ## Creating A second Data Frame for future plot
-top_parks_cluster <- top_parks_merged
-
-  ## Filter to only the top parks by visitation
-top_parks_merged <- arrange(top_parks_merged,desc(Total)) %>%
-  filter(top_parks_merged$Total >= 60000000)
-
-```
-
-\newpage
-
----     
-
-
-
-```{r Plot 6, echo=FALSE}
-  ## Now plot using the 'transformed_top_parks' dataframe
-p6 <- base_map +
-  geom_segment(data = top_parks_cluster, 
-               aes(x = helena_x, y = helena_y, xend = Latitude, 
-               yend = Longitude, color = distance_miles), 
-               arrow = arrow(length = unit(0.1, "inches"))) +
-  scale_color_viridis_b(name = "Distance (miles)") +
-  coord_sf() +
-  labs(title = "Distance from Helena, MT", x = NULL, y = NULL) +
-    theme(legend.position = "right",
-        text = element_text(size = 12), 
-        title = element_text(size = 14),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.ticks = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank(),
-        panel.background = element_rect(fill = "white", color = "white"))
-
-p6
-
-```
-
----
+------------------------------------------------------------------------
 
 # Re-Defining the problem
 
@@ -382,6 +412,34 @@ After seeing this visualization, I want to pivot to a new problem. How I can opt
 ```{r Clustering}
 
   ## Perform a hierarchical clustering
+
+top_parks_cluster <- top_parks_merged
+
+# Function to calculate approximate distance between two points
+calculate_distance <- function(lat1, lon1, lat2, lon2) {
+  distVincentySphere(c(lon1, lat1), c(lon2, lat2)) / 1000  # Convert meters to kilometers
+}
+
+# Create a distance matrix
+num_parks <- nrow(top_parks_merged)
+distance_matrix <- matrix(0, nrow = num_parks, ncol = num_parks, dimnames = list(top_parks_cluster$name, top_parks_cluster$name))
+
+for (i in 1:num_parks) {
+  for (j in 1:num_parks) {
+    if (i != j) {
+      lat1 <- top_parks_cluster$Latitude[i]
+      lon1 <- top_parks_cluster$Longitude[i]
+      lat2 <- top_parks_cluster$Latitude[j]
+      lon2 <- top_parks_cluster$Longitude[j]
+      distance <- calculate_distance(lat1, lon1, lat2, lon2)
+      distance_matrix[i, j] <- distance
+    }
+  }
+}
+
+# Convert the distance matrix to a data frame
+distance_df <- as.data.frame(as.table(distance_matrix))
+names(distance_df) <- c("from", "to", "distance_km")
   
   ## Creating distance matrix
 dist_matrix <- dist(top_parks_cluster[,c('Longitude', 'Latitude')])
@@ -397,19 +455,20 @@ top_parks_cluster$cluster <- park_clusters
 
 With my new set of clustered parks, I want to see how the clusters worked out.
 
----
+------------------------------------------------------------------------
 
 ```{r Plot 7, echo=FALSE}
 
+top_parks_cluster_sf <- st_as_sf(top_parks_cluster, coords = c("Longitude", "Latitude"), crs = 4326)
+
 p7 <- base_map +
-  geom_point(data = top_parks_cluster, aes(x = x, y = y, color = factor(cluster)), size = 2, alpha = 0.9) +
-  scale_color_brewer(palette = "Set1") +  # Use a qualitative color palette
+  geom_sf(data = top_parks_cluster_sf, aes(color = factor(cluster)), size = 2, alpha = 0.9) +
+  scale_color_brewer(palette = "Set1") +  # Qualitative color palette for clusters
   labs(title = "Cluster Analysis of National Parks", 
        color = "Cluster") +
   theme_minimal() +
-  coord_quickmap() +
-    labs(title = "Cluster Results", x = NULL, y = NULL) +
-    theme(legend.position = "right",
+  coord_sf() +  # Use coord_sf() for spatial data
+  theme(legend.position = "right",
         text = element_text(size = 12), 
         title = element_text(size = 14),
         panel.grid.major = element_blank(),
@@ -423,7 +482,7 @@ p7
 
 ```
 
----
+------------------------------------------------------------------------
 
 Not a bad result, but there are a few parks I want to change to a different cluster.
 
@@ -431,26 +490,21 @@ Not a bad result, but there are a few parks I want to change to a different clus
 
 ```{r Adjusting clusters, echo=FALSE}
 
-top_parks_cluster$cluster[12] <- 1
-top_parks_cluster$cluster[33] <- 1
-top_parks_cluster <- top_parks_cluster[-21, ]
-top_parks_cluster <- top_parks_cluster[-6, ]
-top_parks_cluster <- top_parks_cluster[-3, ]
 
 ```
 
----
+------------------------------------------------------------------------
 
 ```{r Plot 7.1, echo=FALSE}
 
-p7.1 <- base_map +
-  geom_point(data = top_parks_cluster, aes(x = x, y = y, color = factor(cluster)), size = 2, alpha = 0.9) +
-  scale_color_brewer(palette = "Set1") +  # Use a qualitative color palette
+p7 <- base_map +
+  geom_sf(data = top_parks_cluster_sf, aes(color = factor(cluster)), size = 1.5, alpha = 0.9) +
+  scale_color_brewer(palette = "Set1") +  # Qualitative color palette for clusters
   labs(title = "Cluster Analysis of National Parks", 
        color = "Cluster") +
   theme_minimal() +
-  labs(title = "Adjusted Cluster Results", x = NULL, y = NULL) +
-    theme(legend.position = "right",
+  coord_sf() +  # Use coord_sf() for spatial data
+  theme(legend.position = "right",
         text = element_text(size = 12), 
         title = element_text(size = 14),
         panel.grid.major = element_blank(),
@@ -460,14 +514,13 @@ p7.1 <- base_map +
         axis.text.y = element_blank(),
         panel.background = element_rect(fill = "white", color = "white"))
 
-p7.1
+p7
 
 ```
 
----
+------------------------------------------------------------------------
 
-Better! Now I want to know what the most efficient way to drive from park to park is so I will use the Traveling Salesman Problem (TSP). The TSP finds shortest possible route that visits each city exactly once and returns to the original city. I would likely be able to get a more accurate route optimization if I was using road directions, rather than straight distances. I think that a basic TSP is more than enough for this situation.
-
+Better! Now I want to know what the most efficient way to drive from park to park is so I will use the Traveling Salesman Problem (TSP). The TSP finds shortest possible route that visits each city exactly once and returns to the original city.
 
 ```{r TSP}
 
@@ -500,25 +553,26 @@ Now that I have the results, I can visualize what the optimal route is. In order
   ## Function to create segments from the TSP solution
 get_tsp_segments <- function(cluster_number, top_parks_cluster, tsp_results) {
   
-    ## Filter the parks by the selected cluster
+  ## Filter the parks by the selected cluster
   selected_cluster <- filter(top_parks_cluster, cluster == cluster_number)
   
-    ## Retrieve the TSP order for the cluster
+  ## Retrieve the TSP order for the cluster
   tsp_order <- tsp_results[[paste("Cluster", cluster_number)]]
+  print(tsp_order)
   tsp_solution_order <- TOUR(tsp_order)
   
-    ## Order the parks according to the TSP solution
+  ## Order the parks according to the TSP solution
   ordered_cluster <- selected_cluster[tsp_solution_order, ]
   
-    ## Close the loop by returning to the starting point
+  ## Close the loop by returning to the starting point
   ordered_cluster <- rbind(ordered_cluster, ordered_cluster[1, ])
   
-    ## Create segments for each leg of the TSP path
+  ## Create segments for each leg of the TSP path
   segments <- data.frame(cluster = cluster_number,
-                         x = ordered_cluster$x[-nrow(ordered_cluster)], 
-                         y = ordered_cluster$y[-nrow(ordered_cluster)], 
-                         xend = ordered_cluster$x[-1], 
-                         yend = ordered_cluster$y[-1]
+                         x = ordered_cluster$Longitude[-nrow(ordered_cluster)], 
+                         y = ordered_cluster$Latitude[-nrow(ordered_cluster)], 
+                         xend = ordered_cluster$Longitude[-1], 
+                         yend = ordered_cluster$Latitude[-1]
                          )
   
   return(segments)
@@ -529,46 +583,342 @@ all_segments <- lapply(1:max(top_parks_cluster$cluster), function(cluster_num) {
   get_tsp_segments(cluster_num, top_parks_cluster, tsp_results)
 })
 
-  ## Combine all segments into one data frame
+## Combine all segments into one data frame
 all_segments_df <- do.call(rbind, all_segments)
 
+
 ```
+
+
+```{r}
+
+# Function to get route coordinates from OSRM
+get_route_osrm <- function(start_lon, start_lat, end_lon, end_lat) {
+  url <- paste0(
+    "http://router.project-osrm.org/route/v1/driving/",
+    start_lon, ",", start_lat, ";", 
+    end_lon, ",", end_lat, 
+    "?overview=full&geometries=geojson"
+  )
+  
+  response <- GET(url)
+  route <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  route_coords <- route$routes$geometry$coordinates[[1]]
+  route_coords_df <- data.frame(
+    lon = route_coords[, 1],
+    lat = route_coords[, 2]
+  )
+  return(route_coords_df)
+}
+
+# Apply the function to each row in the data frame
+routes_list_cluster <- lapply(1:nrow(all_segments_df), function(i) {
+  start_lon <- all_segments_df$x[i]
+  start_lat <- all_segments_df$y[i]
+  end_lon <- all_segments_df$xend[i]
+  end_lat <- all_segments_df$yend[i]
+  
+  route <- get_route_osrm(start_lon, start_lat, end_lon, end_lat)
+  
+  route_df <- data.frame(id = i, cluster =all_segments_df$cluster[i], route)
+  
+  return(route_df)
+})
+
+# Combine all route data frames into one
+all_cluster_routes_df <- do.call(rbind, routes_list_cluster)
+
+# Create an sf object from the combined data frame
+routes_sf <- st_as_sf(all_cluster_routes_df, coords = c("lon", "lat"), crs = 4326, agr = "constant")
+
+routes_sf_lines <- routes_sf %>%
+  group_by(id, cluster) %>%
+  summarize(geometry = st_combine(geometry)) %>%
+  st_cast("LINESTRING")
+
+```
+
+
+
 
 \newpage
 
----
+------------------------------------------------------------------------
 
 ```{r Plot 8, echo=FALSE}
 
-  ## Creating plot 8
-p8 <- base_map +
-  geom_segment(data = all_segments_df, 
-               aes(x = x, y = y, xend = xend, yend = yend, 
-               group = cluster, color = as.factor(cluster),
-               ), 
-               linewidth = unit(0.6, "cm"), 
-               arrow = arrow(length = unit(0.2, "cm"))) +
-  scale_color_brewer(palette = "Set1", name = "Routes") +
-  geom_point(data = all_segments_df, 
-             aes(x = x, y = y, group = cluster), 
-             size = .25) +
-    labs(title = "Multi-park Trip Options", x = NULL, y = NULL) +
-    theme(legend.position = "right",
-          legend.background = element_rect(fill = "white", 
-                                           color = "white"),
-          legend.box.background = element_rect(fill = "white"),
-          legend.key = element_rect(fill = "white", colour = "white"),
-          text = element_text(size = 12), 
-          title = element_text(size = 14),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.ticks = element_blank(), 
-          axis.text.x = element_blank(),
-          axis.text.y = element_blank(),
-          panel.background = element_rect(fill = "white"))
 
-p8
+
+# Plot with arrows at midpoints
+p8 <- base_map +
+  geom_sf(data = routes_sf_lines, color = "black", size = 2, linetype = "solid", arrow = arrow(type = "open", length = unit(0.03, "inches"))) +
+  geom_sf(data = routes_sf_lines, aes(color = as.factor(cluster)), size = .5, linetype = "solid", arrow = arrow(type = "open", length = unit(0.02, "inches"))) +
+  scale_color_viridis_d() +
+  theme_minimal()
+
+print(p8)
 
 ```
 
----
+------------------------------------------------------------------------
+
+```{r}
+
+# Function to calculate approximate distance between two points
+calculate_distance <- function(lat1, lon1, lat2, lon2) {
+  distVincentySphere(c(lon1, lat1), c(lon2, lat2)) / 1000  # Convert meters to kilometers
+}
+
+perform_hierarchical_clustering <- function(df) {
+  num_parks <- nrow(df)
+
+  # Create an empty distance matrix
+  distance_matrix <- matrix(0, nrow = num_parks, ncol = num_parks, 
+                            dimnames = list(1:num_parks, 1:num_parks))
+  
+  # Populate the distance matrix
+  for (i in 1:num_parks) {
+    for (j in 1:num_parks) {
+      if (i != j) {
+        lat1 <- df$Latitude[i]
+        lon1 <- df$Longitude[i]
+        lat2 <- df$Latitude[j]
+        lon2 <- df$Longitude[j]
+        distance <- calculate_distance(lat1, lon1, lat2, lon2)
+        distance_matrix[i, j] <- distance
+      }
+    }
+  }
+  
+# Convert the distance matrix to a dist object for hierarchical clustering
+  dist_matrix <- as.dist(distance_matrix)
+  
+  # Perform hierarchical clustering using Ward's method
+  hc <- hclust(dist_matrix, method = "ward.D2")
+  
+  # Determine the number of clusters (example: sqrt of the number of rows)
+  num_clusters <- max(nrow(df)/5, 1)
+  
+  # Cut the dendrogram to create the clusters
+  clusters <- cutree(hc, k = num_clusters)
+  
+    # Add cluster assignments to the original data frame
+  df$subcluster <- clusters
+
+  return(list(hc = hc, clusters = clusters, df_with_clusters = df))
+}
+
+# Initialize a list to store results for each cluster
+cluster_results_list <- list()
+
+# Loop through each cluster (assuming clusters are numbered from 1 to 5)
+for (i in 1:5) {
+  # Filter the data frame for the current cluster
+  filtered_top_parks_cluster <- top_parks_cluster %>% filter(cluster == i)
+  
+  # Perform hierarchical clustering on the filtered data
+  result <- perform_hierarchical_clustering(filtered_top_parks_cluster)
+  
+    # Store the result in the list with a named entry
+  cluster_results_list[[paste("Cluster", i)]] <- result
+}
+
+# View dendrograms and clusters for each result
+for (i in 1:length(cluster_results_list)) {
+  result <- cluster_results_list[[i]]
+  
+  if (!is.null(result$hc)) {
+    # Plot dendrogram
+    plot(result$hc, main = paste("Dendrogram for Cluster", i))
+    
+    # Print cluster assignments
+    print(result$clusters)
+  } else {
+    print(paste("No clustering performed for cluster", i))
+  }
+}
+
+
+```
+
+
+
+
+```{r TSP 2.0}
+
+
+# Function to create segments from the TSP solution
+get_tsp_segments_subclusters <- function(cluster_number, subcluster_number, cluster_parks_subcluster, tsp_results) {
+  
+  # Filter the parks by the selected subcluster
+  selected_cluster <- filter(cluster_parks_subcluster, subcluster == subcluster_number)
+  
+  # Retrieve the TSP order for the subcluster
+  tsp_order <- tsp_results[[paste("cluster", i, "subcluster", j)]]
+  print(tsp_order)
+  
+  tsp_solution_order <- TOUR(tsp_order)
+  
+  # Order the parks according to the TSP solution
+  ordered_cluster <- selected_cluster[tsp_solution_order, ]
+  
+  # Close the loop by returning to the starting point
+  ordered_cluster <- rbind(ordered_cluster, ordered_cluster[1, ])
+  
+  # Create segments for each leg of the TSP path
+  segments <- data.frame(
+    subcluster = subcluster_number,
+    x = ordered_cluster$Longitude[-nrow(ordered_cluster)], 
+    y = ordered_cluster$Latitude[-nrow(ordered_cluster)], 
+    xend = ordered_cluster$Longitude[-1], 
+    yend = ordered_cluster$Latitude[-1]
+  )
+  
+  return(segments)
+}
+
+# Initialize an empty list to store results
+tsp_results <- list()
+
+# Initialize an empty list to store all segments for subclusters
+all_segments_subclusters <- list()
+
+# Loop through each cluster
+for (i in 1:5) {
+  cluster_parks <- cluster_results_list[[i]] 
+  
+  for (j in 1:max(cluster_parks$clusters)) {
+    # Subset parks for the current subcluster
+    cluster_parks_subcluster <- cluster_parks$df_with_clusters
+    
+    filtered_cluster_parks <- filter(cluster_parks_subcluster, subcluster == j)
+    
+    # Calculate the distance matrix for the current subcluster
+    dist_matrix <- as.dist(distm(filtered_cluster_parks[, c("Longitude", "Latitude")], 
+                                 filtered_cluster_parks[, c("Longitude", "Latitude")], 
+                                 fun = distHaversine))
+    
+    # Solve the TSP problem using the nearest neighbor heuristic
+    tsp_solution <- solve_TSP(TSP(dist_matrix), method = "nearest_insertion")
+    
+    # Store the solution in the list
+    tsp_results[[paste("cluster", i, "subcluster", j)]] <- tsp_solution
+    
+    # Create segments for the TSP path
+    segments <- get_tsp_segments_subclusters(i, j, cluster_parks_subcluster, tsp_results)
+    
+    # Add cluster and subcluster identifiers as columns
+    segments$cluster <- i
+    segments$subcluster <- j
+    
+    all_segments_subclusters[[paste("cluster", i, "subcluster", j)]] <- segments
+  }
+}
+
+# Combine all segments into one data frame
+all_segments_subcluster_df <- do.call(rbind, all_segments_subclusters)
+
+```
+
+Now that I have the results, I can visualize what the optimal route is. In order to do that, I want to plot them all on the same map which will require creating a function to compile all the data points into one table.
+
+
+```{r}
+
+# Function to get route coordinates from OSRM
+get_route_osrm <- function(start_lon, start_lat, end_lon, end_lat) {
+  url <- paste0(
+    "http://router.project-osrm.org/route/v1/driving/",
+    start_lon, ",", start_lat, ";", 
+    end_lon, ",", end_lat, 
+    "?overview=full&geometries=geojson"
+  )
+  
+  response <- GET(url)
+  route <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  route_coords <- route$routes$geometry$coordinates[[1]]
+  route_coords_df <- data.frame(
+    lon = route_coords[, 1],
+    lat = route_coords[, 2]
+  )
+  return(route_coords_df)
+}
+
+# Apply the function to each row in the data frame
+routes_list_subcluster <- lapply(1:nrow(all_segments_subcluster_df), function(i) {
+  start_lon <- all_segments_subcluster_df$x[i]
+  start_lat <- all_segments_subcluster_df$y[i]
+  end_lon <- all_segments_subcluster_df$xend[i]
+  end_lat <- all_segments_subcluster_df$yend[i]
+  
+  route <- get_route_osrm(start_lon, start_lat, end_lon, end_lat)
+  
+  route_df <- data.frame(id = i, cluster = all_segments_subcluster_df$cluster[i], subcluster = all_segments_subcluster_df$subcluster[i], route)
+  
+  return(route_df)
+})
+
+# Combine all route data frames into one
+all_subcluster_routes_df <- do.call(rbind, routes_list_subcluster)
+
+# Create an sf object from the combined data frame
+routes_subcluster_sf <- st_as_sf(all_subcluster_routes_df, coords = c("lon", "lat"), crs = 4326, agr = "constant")
+
+routes_subcluster_sf_lines <- routes_subcluster_sf %>%
+  group_by(id, cluster) %>%
+  summarize(geometry = st_combine(geometry)) %>%
+  st_cast("LINESTRING")
+
+```
+
+
+
+
+
+```{r Plot 8, echo=FALSE}
+
+# Customize the plot
+p <- base_map +
+  geom_sf(data = routes_subcluster_sf_lines, color = "black", size = 2, linetype = "solid",
+          arrow = arrow(type = "open", length = unit(0.05, "inches"))) +
+  geom_sf(data = routes_subcluster_sf_lines, aes(color = as.factor(cluster)), size = 0.7, linetype = "solid",
+          arrow = arrow(type = "open", length = unit(0.04, "inches"))) +
+  scale_color_viridis_d(option = "plasma", direction = -1) +
+  labs(title = "Optimized Routes for visitng parks Regional Parks",
+       subtitle = "",
+       color = "Cluster") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(hjust = 0.5),
+        plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        panel.grid = element_blank()) +
+  guides(color = guide_legend(ncol = 1))
+
+# Print the plot
+print(p)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
