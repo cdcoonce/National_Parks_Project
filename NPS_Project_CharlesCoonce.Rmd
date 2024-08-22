@@ -33,6 +33,8 @@ library(gganimate)
 library(tinytex)
 ```
 
+<div id="data_exploration">
+
 # Getting Familiar with our Data!
 
 We first need to load the data set I found from [data.world](https://data.world/inform8n/us-national-parks-visitation-1904-2016-with-boundaries/workspace/file?filename=All+National+Parks+Visitation+1904-2016.csv).
@@ -40,7 +42,7 @@ We first need to load the data set I found from [data.world](https://data.world/
 ```{r Add National Parks Visitor Data Set}
 
   ## Getting my Data Set
-data <- read.csv("~/Documents/GitHub/National_Parks_Project/Data Sources/US_NPS_Visitation/original/All National Parks Visitation 1904-2016.csv")
+data <- read.csv("assets/Data Sources/US_NPS_Visitation/original/All National Parks Visitation 1904-2016.csv")
 
 ```
 
@@ -90,6 +92,9 @@ data_totals <- subset(data_clean, YearRaw == "Total")
 data_clean <- subset(data_clean, YearRaw != "Total")
 data_clean$YearRaw <- as.numeric(data_clean$YearRaw)
 ```
+
+</div>
+<div id="visitation_trends">
 
 ## Visitation Trends
 
@@ -160,6 +165,9 @@ p2
 
 These plots show that Intermountain and Pacific West regions have seen the steepest increases in visits. I will focus my attention on these two regions.
 
+</div>
+<div id="visitation_trends_states">
+
 ## States
 
 In order to show total visitation by state I need to filter and group my data set.
@@ -214,6 +222,9 @@ print(p3)
 
 This heatmap shows which states have the most visitors. Based on the results, I will pick the top parks in California, Wyoming, and Washington. I'd like to start thinking about weighing the distance from my home and the number of visitors to see if it can help me decide.
 
+</div>
+<div id="visitation_trends_parks">
+
 I will need to find another dataset to add latitude and longitude values for the top parks. and add that information into my top parks data I started preparing below.
 
 ```{r Filter and group by Park}
@@ -233,7 +244,7 @@ I was able to compile the coordinates for a number of the most visited parks. I 
 ```{r Create new data frame from Text file, warning=FALSE}
 
   ## Creating a new data frame from the coordinates I compiled
-geo_data <- read_csv("~/Documents/GitHub/National_Parks_Project/Data Sources/geo_data_processed.txt", col_types = cols(Lat = col_number(),
+geo_data <- read_csv("~/Documents/GitHub/National_Parks_Project/assets/Data Sources/geo_data_processed.txt", col_types = cols(Lat = col_number(),
     Long = col_number()))
 
 ```
@@ -287,6 +298,9 @@ print(bubble_plot)
 ------------------------------------------------------------------------
 
 Now that I have a better idea of where specific top parks are I can start narrowing my search. I think I should consider distance from my home.
+
+</div>
+<div id="distance_analysis">
 
 ## Distance Analysis
 
@@ -405,6 +419,9 @@ print(p)
 
 ------------------------------------------------------------------------
 
+</div>
+<div id="cluster_parks">
+
 # Re-Defining the problem
 
 After seeing this visualization, I want to pivot to a new problem. How I can optimize seeing multiple parks per trip rather than trying to choose one park. There are too many nearby! I need to use a clustering model to group the parks by looking at their distances from each other. To do this I need to use a hierarchical cluster function.
@@ -484,43 +501,10 @@ p7
 
 ------------------------------------------------------------------------
 
-Not a bad result, but there are a few parks I want to change to a different cluster.
+</div>
+<div id="cluster_parks_tsp">
 
-\newpage
-
-```{r Adjusting clusters, echo=FALSE}
-
-
-```
-
-------------------------------------------------------------------------
-
-```{r Plot 7.1, echo=FALSE}
-
-p7 <- base_map +
-  geom_sf(data = top_parks_cluster_sf, aes(color = factor(cluster)), size = 1.5, alpha = 0.9) +
-  scale_color_brewer(palette = "Set1") +  # Qualitative color palette for clusters
-  labs(title = "Cluster Analysis of National Parks", 
-       color = "Cluster") +
-  theme_minimal() +
-  coord_sf() +  # Use coord_sf() for spatial data
-  theme(legend.position = "right",
-        text = element_text(size = 12), 
-        title = element_text(size = 14),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.ticks = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank(),
-        panel.background = element_rect(fill = "white", color = "white"))
-
-p7
-
-```
-
-------------------------------------------------------------------------
-
-Better! Now I want to know what the most efficient way to drive from park to park is so I will use the Traveling Salesman Problem (TSP). The TSP finds shortest possible route that visits each city exactly once and returns to the original city.
+ Now I want to know what the most efficient way to drive from park to park is so I will use the Traveling Salesman Problem (TSP). The TSP finds shortest possible route that visits each city exactly once and returns to the original city.
 
 ```{r TSP}
 
@@ -663,6 +647,9 @@ print(p8)
 
 ------------------------------------------------------------------------
 
+</div>
+<div id="subcluster_parks">
+
 ```{r}
 
 # Function to calculate approximate distance between two points
@@ -742,7 +729,8 @@ for (i in 1:length(cluster_results_list)) {
 
 ```
 
-
+</div>
+<div id="subcluster_parks_tsp">
 
 
 ```{r TSP 2.0}
@@ -877,7 +865,7 @@ routes_subcluster_sf_lines <- routes_subcluster_sf %>%
 
 
 
-```{r Plot 8, echo=FALSE}
+```{r Plot 9, echo=FALSE}
 
 # Customize the plot
 p <- base_map +
