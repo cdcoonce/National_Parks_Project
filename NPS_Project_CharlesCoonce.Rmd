@@ -120,7 +120,7 @@ p1
 
 This plot shows how visitor numbers have changed over time. It appears there is an overall increasing trend in the number of visitors, which could be attributed to a variety of factors that would require a deeper dive.
 
-![National Parks Service Regions - This poster explains the region categories used in this data set.](~/Documents/GitHub/National_Parks_Project/Data%20Sources)
+![National Parks Service Regions - This poster explains the region categories used in this data set.](assets/nps_regions_map.jpg){width=650 height=600}
 
 \newpage
 
@@ -146,7 +146,6 @@ region_total <- data_clean %>%
 
 ```{r Plot 2, echo=FALSE, warning=FALSE}
 
-  ## Line Plot by Selected Regions
 p2 <- ggplot(region_total, aes(x = YearRaw, y = Total, group = Region, color = Region)) +
   geom_line() +
   scale_y_continuous(labels = label_number()) +
@@ -201,31 +200,39 @@ merged_data <- merge(states_map, state_data, by.x = "abbr",
 Now I can prepare my base layer for adding multiple data visualizations.
 
 ```{r Create Base Map for Map Plot}
-# Create the heatmap
+
 p3 <- ggplot() +
   geom_sf(data = merged_data, aes(fill = Total), color = "black") +
   scale_fill_continuous(
-    labels = scales::label_number(), 
+    labels = scales::comma, 
     low = "white", 
     high = "red", 
-    name = "Total Visits", 
+    name = "All Time Visits", 
     na.value = "gray"
   ) +
   theme_void() +
-  labs(title = "Heatmap of Total National Park Visits by Selected Western US States")
+  labs(title = "Heatmap of Total National Park Visits",
+       subtitle = "by Selected Western US States") +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(size = 14, face = "bold"), 
+    legend.text = element_text(size = 12), 
+    legend.key.size = unit(1.5, "cm"),  
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+  )
 
-# Plot
 print(p3)
 ```
 
 \newpage
 
-This heatmap shows which states have the most visitors. Based on the results, I will pick the top parks in California, Wyoming, and Washington. I'd like to start thinking about weighing the distance from my home and the number of visitors to see if it can help me decide.
+This heat map shows which states have the most visitors. Based on the results, I will pick the top parks in California, Wyoming, and Washington. I'd like to start thinking about weighing the distance from my home and the number of visitors to see if it can help me decide.
 
 </div>
 <div id="visitation_trends_parks">
 
-I will need to find another dataset to add latitude and longitude values for the top parks. and add that information into my top parks data I started preparing below.
+I will need to find another data set to add latitude and longitude values for the top parks. and add that information into my top parks data I started preparing below.
 
 ```{r Filter and group by Park}
 
@@ -279,18 +286,28 @@ Now I can create a plot to summarize my findings.
 
 ------------------------------------------------------------------------
 
-```{r}
-# Create a base map with state boundaries
-base_map <- ggplot() +
-  geom_sf(data = states_map, fill = "white", color = "black") +
-  theme_minimal() +
-  labs(title = "Total Visitation for Western United States National Parks")
+```{r bubble Plot}
 
-# Create bubble plot
+base_map <- ggplot() +
+  geom_sf(data = states_map, fill = "white", color = "black" ) +
+  theme_minimal() +
+  labs(title = "Western United States National Parks",
+       subtitle = "All Time Visitation")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        plot.subtitle = element_text(size = 14, hjust = 0.5),
+        plot.caption = element_text(size = 10, hjust = 1),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+
 bubble_plot <- base_map +
-  geom_sf(data = top_parks_rearranged_sf, aes(size = Total), color = "blue", alpha = 0.7) +
-  scale_size_continuous(name = "Total Visitors", labels = scales::label_number(big.mark = ",")) +
-  theme(legend.position = "right")
+  geom_sf(data = top_parks_rearranged_sf, aes(size = Total), fill = "dodgerblue3", color = "blue", alpha = 0.6, shape = 21) + 
+  scale_size_continuous(name = "Total Visitors", 
+                        labels = scales::label_number(big.mark = ","),
+                        transform = "sqrt") +
+  theme(legend.position = "right",
+        legend.title = element_text(face = "bold", size = 12),
+        legend.text = element_text(size = 10))
 
 print(bubble_plot)
 ```
@@ -321,7 +338,7 @@ top_parks_merged_sf <- st_as_sf(top_parks_merged,
 
 ```
 
-```{r}
+```{r route coords}
 
   ## Function for getting route coordinates for each park
 get_route <- function(start, end) {
@@ -357,7 +374,7 @@ all_routes <- do.call(rbind, routes_list)
 ```
 
 
-```{r}
+```{r conversions}
 
 # Conversion factor from meters to miles
 meters_to_miles <- 1609.34
@@ -387,32 +404,35 @@ routes_list_with_distance_miles <- Map(function(df, dist) {
   return(df)
 }, routes_list, total_distances_miles)
 
-# Combine all data frames into one data frame
 all_routes <- bind_rows(routes_list_with_distance_miles)
 
 ```
 
 
-```{r}
+```{r plot routes}
 route_sf <- st_as_sf(all_routes, coords = c("lon", "lat"), crs = 4326)
 
 # Add a column for distance categories for better visualization
 all_routes$distance_category <- cut(
   all_routes$total_distance_miles,
-  breaks = c(0, 10, 50, 100, 200, Inf), # Customize the breaks as needed
+  breaks = c(0, 10, 50, 100, 200, Inf), 
   labels = c("0-10 miles", "10-50 miles", "50-100 miles", "100-200 miles", "200+ miles")
 )
 
-# Plot with color gradient based on distance
 p <- base_map +
-  geom_sf(data = route_sf, aes(color = total_distance_miles), size = 0.2) +
-  geom_point(aes(x = start["lon"], y = start["lat"]), color = "red", size = 1, shape = 17) +
-  geom_point(data = top_parks_merged, aes(x = Longitude, y = Latitude), color = "green", size = 1, shape = 17) +
+  geom_sf(data = route_sf, aes(color = total_distance_miles), size = 0.1) +
   labs(title = "Routes from Helena, MT to National Parks",
+       subtitle = "Distances visualized with a color gradient",
        x = "Longitude", y = "Latitude",
        color = "Distance (miles)") +
   theme_minimal() +
-  scale_color_viridis_c() # Use a continuous color scale
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5, vjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  scale_color_viridis_c()
 
 print(p)
 ```
@@ -480,20 +500,22 @@ top_parks_cluster_sf <- st_as_sf(top_parks_cluster, coords = c("Longitude", "Lat
 
 p7 <- base_map +
   geom_sf(data = top_parks_cluster_sf, aes(color = factor(cluster)), size = 2, alpha = 0.9) +
-  scale_color_brewer(palette = "Set1") +  # Qualitative color palette for clusters
+  scale_color_brewer(palette = "Set1") +
   labs(title = "Cluster Analysis of National Parks", 
        color = "Cluster") +
   theme_minimal() +
-  coord_sf() +  # Use coord_sf() for spatial data
+  coord_sf() +
   theme(legend.position = "right",
-        text = element_text(size = 12), 
-        title = element_text(size = 14),
+        legend.title = element_text(size = 16, face = "bold"), 
+        legend.text = element_text(size = 14),
+        legend.key.size = unit(1, "cm"),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        axis.ticks = element_blank(), 
+        axis.ticks = element_blank(),
         axis.text.x = element_blank(),
-        axis.text.y = element_blank(),
-        panel.background = element_rect(fill = "white", color = "white"))
+        axis.text.y = element_blank())
 
 p7
 
@@ -574,7 +596,7 @@ all_segments_df <- do.call(rbind, all_segments)
 ```
 
 
-```{r}
+```{r A function to get the route coordinates from OSRM}
 
 # Function to get route coordinates from OSRM
 get_route_osrm <- function(start_lon, start_lat, end_lon, end_lat) {
@@ -632,15 +654,38 @@ routes_sf_lines <- routes_sf %>%
 
 ```{r Plot 8, echo=FALSE}
 
-
-
-# Plot with arrows at midpoints
+# Create the plot
 p8 <- base_map +
-  geom_sf(data = routes_sf_lines, color = "black", size = 2, linetype = "solid", arrow = arrow(type = "open", length = unit(0.03, "inches"))) +
-  geom_sf(data = routes_sf_lines, aes(color = as.factor(cluster)), size = .5, linetype = "solid", arrow = arrow(type = "open", length = unit(0.02, "inches"))) +
-  scale_color_viridis_d() +
-  theme_minimal()
+  geom_sf(data = routes_sf_lines, 
+          color = "black", 
+          size = 1,  
+          linetype = "solid", 
+          arrow = arrow(type = "open", length = unit(0.02, "inches"))) + 
+  geom_sf(data = routes_sf_lines, 
+          aes(color = as.factor(cluster)), 
+          size = 0.5, 
+          linetype = "solid", 
+          arrow = arrow(type = "open", length = unit(0.015, "inches"))) + 
+  scale_color_brewer(palette = "Set1") +
+  labs(title = "Traveling Salesman Route Optimization",
+       subtitle = "Visiting Clustered Parks",
+       color = "Cluster") +
+  theme_minimal(base_size = 14) + 
+  theme(legend.position = "right",
+        legend.title = element_text(size = 16, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.key.size = unit( 1, "cm"),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "white")) + 
+  coord_sf()  
 
+# Print the plot
 print(p8)
 
 ```
@@ -650,7 +695,7 @@ print(p8)
 </div>
 <div id="subcluster_parks">
 
-```{r}
+```{r more TSP}
 
 # Function to calculate approximate distance between two points
 calculate_distance <- function(lat1, lon1, lat2, lon2) {
@@ -812,7 +857,7 @@ all_segments_subcluster_df <- do.call(rbind, all_segments_subclusters)
 Now that I have the results, I can visualize what the optimal route is. In order to do that, I want to plot them all on the same map which will require creating a function to compile all the data points into one table.
 
 
-```{r}
+```{r More Route Coordinates}
 
 # Function to get route coordinates from OSRM
 get_route_osrm <- function(start_lon, start_lat, end_lon, end_lat) {
@@ -867,26 +912,34 @@ routes_subcluster_sf_lines <- routes_subcluster_sf %>%
 
 ```{r Plot 9, echo=FALSE}
 
-# Customize the plot
 p <- base_map +
-  geom_sf(data = routes_subcluster_sf_lines, color = "black", size = 2, linetype = "solid",
-          arrow = arrow(type = "open", length = unit(0.05, "inches"))) +
-  geom_sf(data = routes_subcluster_sf_lines, aes(color = as.factor(cluster)), size = 0.7, linetype = "solid",
-          arrow = arrow(type = "open", length = unit(0.04, "inches"))) +
-  scale_color_viridis_d(option = "plasma", direction = -1) +
-  labs(title = "Optimized Routes for visitng parks Regional Parks",
-       subtitle = "",
+  geom_sf(data = routes_subcluster_sf_lines, 
+          color = "black", 
+          size = 1.5,
+          linetype = "solid", 
+          arrow = arrow(type = "open", length = unit(0.03, "inches"))) +
+  geom_sf(data = routes_subcluster_sf_lines, 
+          aes(color = as.factor(cluster)), 
+          size = 0.7, 
+          linetype = "solid", 
+          arrow = arrow(type = "open", length = unit(0.02, "inches"))) + 
+  scale_color_brewer(palette = "Set1") +
+  labs(title = "Traveling Salesman Optimized Routes",
+       subtitle = "Reclustering the original clusters",
        color = "Cluster") +
   theme_minimal(base_size = 14) +
   theme(legend.position = "right",
         legend.box = "vertical",
-        legend.title = element_text(hjust = 0.5),
+        legend.title = element_text(size = 16, face = "bold"),
+        legend.text = element_text(size = 14),
+        legend.key.size = unit(1, "cm"),
         plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
         plot.subtitle = element_text(size = 12, hjust = 0.5),
-        panel.grid = element_blank()) +
-  guides(color = guide_legend(ncol = 1))
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill = "white", color = "white")) +
+  guides(color = guide_legend(ncol = 1, byrow = TRUE)) +
+  labs(caption = "Each cluster went through hierarchical \n clustering to redetermine smaller groupings.")
 
-# Print the plot
 print(p)
 
 ```
