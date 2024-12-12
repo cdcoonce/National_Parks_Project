@@ -107,11 +107,22 @@ I want to understand the trend for all National park visitation over the years b
 sum_by_year <- aggregate(Visitors ~ YearRaw, data_clean, sum) 
 
 p1 <- ggplot(data = sum_by_year, aes(x = YearRaw, y = Visitors)) +
-  geom_line() +
-  scale_y_continuous(labels = label_number()) +
-  theme_minimal() +
-  labs(title = "Total National Park Visitation per Year (1904-2016)",
-       x = "Year", y = "Total Visitors (in Millions)")
+  geom_line(size = 1, color = "blue", alpha = 0.8) + 
+  scale_y_continuous(labels = scales::label_number(scale = 1e-6, suffix = "M")) +
+  theme_minimal(base_size = 12) + 
+  labs(
+    title = "Total National Park Visitation per Year (1904-2016)",
+    x = "Year",
+    y = "Total Visitors (in Millions)"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+    axis.title.x = element_text(size = 12, margin = margin(t = 10)),
+    axis.title.y = element_text(size = 12, margin = margin(r = 10)),
+    axis.text = element_text(size = 10),
+    panel.grid.major = element_line(color = "gray", size = 0.3), 
+    panel.grid.minor = element_blank()
+  )
 p1
 
 ```
@@ -120,7 +131,7 @@ p1
 
 This plot shows how visitor numbers have changed over time. It appears there is an overall increasing trend in the number of visitors, which could be attributed to a variety of factors that would require a deeper dive.
 
-![National Parks Service Regions - This poster explains the region categories used in this data set.](assets/nps_regions_map.jpg){width=650 height=600}
+![National Parks Service Regions - This poster explains the region categories used in this data set.](assets/images/NatParkServiceRegionsMap.png){width=400 height=800}
 
 \newpage
 
@@ -147,15 +158,24 @@ region_total <- data_clean %>%
 ```{r Plot 2, echo=FALSE, warning=FALSE}
 
 p2 <- ggplot(region_total, aes(x = YearRaw, y = Total, group = Region, color = Region)) +
-  geom_line() +
-  scale_y_continuous(labels = label_number()) +
-  theme_minimal() +
-  labs(title = "Total National Park Visitation per Year (1904-2016)", 
-       x = NULL,
-       y = "Total Visitors (in Millions)") +
-  facet_wrap(~ Region) +
-  theme(axis.text.x = element_blank())
-
+  geom_line(size = .5, alpha = 0.8) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-6, suffix = "M")) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Regional National Park Visitation per Year (1904-2016)",
+    x = "Year",
+    y = "Total Visitors (in Millions)"
+  ) +
+  facet_wrap(~ Region, ncol = 3) +
+  theme(
+    strip.text = element_text(size = 12, face = "bold", color = "darkblue"),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+    panel.grid.major = element_line(color = "gray", size = 0.3),
+    panel.grid.minor = element_blank()
+  )
 p2
 
 ```
@@ -202,7 +222,7 @@ Now I can prepare my base layer for adding multiple data visualizations.
 ```{r Create Base Map for Map Plot}
 
 p3 <- ggplot() +
-  geom_sf(data = merged_data, aes(fill = Total), color = "black") +
+  geom_sf(data = merged_data, aes(fill = Total), color = "black", size = 0.2) +  # Thin border lines
   scale_fill_continuous(
     labels = scales::comma, 
     low = "white", 
@@ -211,15 +231,18 @@ p3 <- ggplot() +
     na.value = "gray"
   ) +
   theme_void() +
-  labs(title = "Heatmap of Total National Park Visits",
-       subtitle = "by Selected Western US States") +
+  labs(
+    title = "Heatmap of Total National Park Visits",
+    subtitle = "by Selected Western US States"
+  ) +
   theme(
     legend.position = "right",
     legend.title = element_text(size = 14, face = "bold"), 
     legend.text = element_text(size = 12), 
-    legend.key.size = unit(1.5, "cm"),  
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    legend.key.size = unit(1.2, "cm"),  # Adjust legend key size
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5, margin = margin(b = 10)),  
+    plot.subtitle = element_text(size = 14, hjust = 0.5, margin = margin(b = 10)),
+    legend.box.margin = margin(5, 5, 5, 5)  # Add spacing around legend box
   )
 
 print(p3)
