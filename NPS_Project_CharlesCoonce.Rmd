@@ -230,19 +230,21 @@ p3 <- ggplot() +
     name = "All Time Visits", 
     na.value = "gray"
   ) +
-  theme_void() +
+  theme_minimal() +
   labs(
     title = "Heatmap of Total National Park Visits",
-    subtitle = "by Selected Western US States"
+    subtitle = "by Selected Western US States",
+    x = "Longitude",
+    y = "Latitude"
   ) +
   theme(
     legend.position = "right",
-    legend.title = element_text(size = 14, face = "bold"), 
-    legend.text = element_text(size = 12), 
-    legend.key.size = unit(1.2, "cm"),  # Adjust legend key size
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5, margin = margin(b = 10)),  
-    plot.subtitle = element_text(size = 14, hjust = 0.5, margin = margin(b = 10)),
-    legend.box.margin = margin(5, 5, 5, 5)  # Add spacing around legend box
+    legend.title = element_text(size = 12, face = "bold"), 
+    legend.text = element_text(size = 10), 
+    legend.key.size = unit(0.8, "cm"),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5, margin = margin(t = 5, b = 10)),  
+    plot.subtitle = element_text(size = 14, hjust = 0.5, margin = margin(t = 5, b = 10)),
+    legend.box.margin = margin(5, 5, 5, 5)
   )
 
 print(p3)
@@ -324,14 +326,35 @@ base_map <- ggplot() +
 
 
 bubble_plot <- base_map +
-  geom_sf(data = top_parks_rearranged_sf, aes(size = Total), fill = "dodgerblue3", color = "blue", alpha = 0.6, shape = 21) + 
-  scale_size_continuous(name = "Total Visitors", 
-                        labels = scales::label_number(big.mark = ","),
-                        transform = "sqrt") +
-  theme(legend.position = "right",
-        legend.title = element_text(face = "bold", size = 12),
-        legend.text = element_text(size = 10))
+  geom_sf(
+    data = top_parks_rearranged_sf, 
+    aes(size = Total), 
+    fill = "dodgerblue3", 
+    color = "blue", 
+    alpha = 0.6, 
+    shape = 21
+  ) + 
+  scale_size_continuous(
+    name = "Total Visitors", 
+    labels = scales::label_number(big.mark = ","),
+    range = c(1, 8),
+    guide = guide_legend(override.aes = list(alpha = 0.6)) 
+  ) +
+  labs(
+    title = "Western United States National Parks",
+    subtitle = "All Time Visitation"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5, margin = margin(b = 5)),
+    plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(b = 1)),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 8), 
+    legend.key.size = unit(0.4, "cm")
+  )
 
+# Enlarge map by increasing output device size (in RMarkdown or other IDEs)
 print(bubble_plot)
 ```
 
@@ -443,19 +466,30 @@ all_routes$distance_category <- cut(
 )
 
 p <- base_map +
-  geom_sf(data = route_sf, aes(color = total_distance_miles), size = 0.1) +
-  labs(title = "Routes from Helena, MT to National Parks",
-       subtitle = "Distances visualized with a color gradient",
-       x = "Longitude", y = "Latitude",
-       color = "Distance (miles)") +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold", size = 16, hjust = 0.5, vjust = 0.5),
-    plot.subtitle = element_text(size = 12, hjust = 0.5),
-    legend.title = element_text(size = 12),
-    legend.text = element_text(size = 10)
+  geom_sf(
+    data = route_sf, 
+    aes(color = total_distance_miles), 
+    size = 0.1,
+    alpha = 0.8
   ) +
-  scale_color_viridis_c()
+  labs(
+    title = "Routes from Helena, MT to National Parks",
+    subtitle = "Distances visualized with a color gradient",
+    x = "Longitude", 
+    y = "Latitude",
+    color = "Distance (miles)"
+  ) +
+  scale_color_viridis_c() +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5, margin = margin(b = 10)),
+    plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(b = 10)),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.major = element_line(color = "gray90", size = 0.3),
+    panel.grid.minor = element_blank()
+  )
 
 print(p)
 ```
@@ -522,24 +556,22 @@ With my new set of clustered parks, I want to see how the clusters worked out.
 top_parks_cluster_sf <- st_as_sf(top_parks_cluster, coords = c("Longitude", "Latitude"), crs = 4326)
 
 p7 <- base_map +
-  geom_sf(data = top_parks_cluster_sf, aes(color = factor(cluster)), size = 2, alpha = 0.9) +
+  geom_sf(data = top_parks_cluster_sf, 
+          aes(color = factor(cluster)), 
+          size = 2, 
+          alpha = 0.9
+  ) +
   scale_color_brewer(palette = "Set1") +
-  labs(title = "Cluster Analysis of National Parks", 
-       color = "Cluster") +
+  labs(title = "Cluster Analysis of National Parks",
+       x = "Longitude", 
+       y = "Latitude"
+  ) +
   theme_minimal() +
   coord_sf() +
-  theme(legend.position = "right",
-        legend.title = element_text(size = 16, face = "bold"), 
-        legend.text = element_text(size = 14),
-        legend.key.size = unit(1, "cm"),
-        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+  theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
         plot.subtitle = element_text(size = 12, hjust = 0.5),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.ticks = element_blank(),
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank())
-
+        legend.position = "none"
+  )
 p7
 
 ```
@@ -681,30 +713,24 @@ routes_sf_lines <- routes_sf %>%
 p8 <- base_map +
   geom_sf(data = routes_sf_lines, 
           color = "black", 
-          size = 1,  
+          size = .5,  
           linetype = "solid", 
           arrow = arrow(type = "open", length = unit(0.02, "inches"))) + 
   geom_sf(data = routes_sf_lines, 
           aes(color = as.factor(cluster)), 
-          size = 0.5, 
+          size = 0.2, 
           linetype = "solid", 
           arrow = arrow(type = "open", length = unit(0.015, "inches"))) + 
   scale_color_brewer(palette = "Set1") +
   labs(title = "Traveling Salesman Route Optimization",
        subtitle = "Visiting Clustered Parks",
+       x = "Longitude", 
+       y = "Latitude",
        color = "Cluster") +
   theme_minimal(base_size = 14) + 
-  theme(legend.position = "right",
-        legend.title = element_text(size = 16, face = "bold"),
-        legend.text = element_text(size = 12),
-        legend.key.size = unit( 1, "cm"),
+  theme(legend.position = "none",
         plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
         plot.subtitle = element_text(size = 12, hjust = 0.5),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.ticks = element_blank(),
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank(),
         panel.background = element_rect(fill = "white", color = "white")) + 
   coord_sf()  
 
@@ -949,19 +975,14 @@ p <- base_map +
   scale_color_brewer(palette = "Set1") +
   labs(title = "Traveling Salesman Optimized Routes",
        subtitle = "Reclustering the original clusters",
+       x = "Longitude",
+       y = "Latitude",
        color = "Cluster") +
   theme_minimal(base_size = 14) +
-  theme(legend.position = "right",
-        legend.box = "vertical",
-        legend.title = element_text(size = 16, face = "bold"),
-        legend.text = element_text(size = 14),
-        legend.key.size = unit(1, "cm"),
+  theme(legend.position = "none",
         plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
         plot.subtitle = element_text(size = 12, hjust = 0.5),
-        panel.grid = element_blank(),
-        panel.background = element_rect(fill = "white", color = "white")) +
-  guides(color = guide_legend(ncol = 1, byrow = TRUE)) +
-  labs(caption = "Each cluster went through hierarchical \n clustering to redetermine smaller groupings.")
+        panel.background = element_rect(fill = "white", color = "white"))
 
 print(p)
 
