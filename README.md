@@ -62,7 +62,6 @@ This project explores visitation trends for U.S. National Parks from 1904 to 201
 ### Route Optimization
 
 - Apply the TSP to find the shortest route for visiting parks within each cluster.
-- Use subclusters to refine routes further.
 
 ---
 
@@ -82,6 +81,7 @@ This project explores visitation trends for U.S. National Parks from 1904 to 201
 
 ## Future Work
 
+- Use subclusters to refine routes further.
 - Incorporate additional datasets for park features (e.g., terrain, amenities).
 - Perform sentiment analysis on park reviews to understand visitor preferences.
 - Create an interactive dashboard for route planning and visitation trends.
